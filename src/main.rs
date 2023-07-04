@@ -1,13 +1,14 @@
-use std::cmp::{max, min};
-
 use bracket_lib::prelude::*;
 use specs::{prelude::*, Component};
 
-#[derive(PartialEq, Copy, Clone)]
-enum TileType {
-    Wall,
-    Floor,
-}
+mod rect;
+use rect::Rect;
+
+mod map;
+use map::*;
+
+mod player;
+use player::*;
 
 #[derive(Component)]
 struct Position {
@@ -22,99 +23,13 @@ struct Renderable {
     bg: RGB,
 }
 
-#[derive(Component, Debug)]
-struct Player {}
-
-struct State {
+pub struct State {
     ecs: World,
 }
 
-fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
-    let mut positions = ecs.write_storage::<Position>();
-    let mut players = ecs.write_storage::<Player>();
-
-    for (_player, pos) in (&mut players, &mut positions).join() {
-        pos.x = min(79, max(0, pos.x + delta_x));
-        pos.y = min(49, max(0, pos.y + delta_y));
-    }
-}
-
-fn player_input(gs: &mut State, ctx: &mut BTerm) {
-    // Player movement
-    match ctx.key {
-        None => {} // Nothing happened
-        Some(key) => match key {
-            VirtualKeyCode::Left => try_move_player(-1, 0, &mut gs.ecs),
-            VirtualKeyCode::Right => try_move_player(1, 0, &mut gs.ecs),
-            VirtualKeyCode::Up => try_move_player(0, -1, &mut gs.ecs),
-            VirtualKeyCode::Down => try_move_player(0, 1, &mut gs.ecs),
-            _ => {}
-        },
-    }
-}
-
-pub fn xy_idx(x: i32, y: i32) -> usize {
-    (y as usize * 80) + x as usize
-}
-
-fn new_map() -> Vec<TileType> {
-    let mut map = vec![TileType::Floor; 80 * 50];
-
-    // Make the boundaries walls
-    for x in 0..80 {
-        map[xy_idx(x, 0)] = TileType::Wall;
-        map[xy_idx(x, 49)] = TileType::Wall;
-    }
-    for y in 0..50 {
-        map[xy_idx(0, y)] = TileType::Wall;
-        map[xy_idx(79, y)] = TileType::Wall;
-    }
-
-    let mut rng = RandomNumberGenerator::new();
-    for _ in 0..400 {
-        let x = rng.roll_dice(1, 79);
-        let y = rng.roll_dice(1, 49);
-        let idx = xy_idx(x, y);
-        if idx != xy_idx(40, 25) {
-            map[idx] = TileType::Wall;
-        }
-    }
-
-    map
-}
-
-fn draw_map(map: &[TileType], ctx: &mut BTerm) {
-    let mut y = 0;
-    let mut x = 0;
-    for tile in map.iter() {
-        // Render a tile depending upon the tile type
-        match tile {
-            TileType::Floor => {
-                ctx.set(
-                    x,
-                    y,
-                    RGB::from_f32(0.5, 0.5, 0.5),
-                    RGB::from_f32(0., 0., 0.),
-                    to_cp437('.'),
-                );
-            }
-            TileType::Wall => {
-                ctx.set(
-                    x,
-                    y,
-                    RGB::from_f32(0.0, 1.0, 0.0),
-                    RGB::from_f32(0., 0., 0.),
-                    to_cp437('#'),
-                );
-            }
-        }
-
-        // Move the coordinates
-        x += 1;
-        if x > 79 {
-            x = 0;
-            y += 1;
-        }
+impl State {
+    fn run_systems(&mut self) {
+        self.ecs.maintain();
     }
 }
 
@@ -137,12 +52,6 @@ impl GameState for State {
     }
 }
 
-impl State {
-    fn run_systems(&mut self) {
-        self.ecs.maintain();
-    }
-}
-
 fn main() -> BError {
     let context = BTermBuilder::simple80x50()
         .with_title("My Roguelike")
@@ -152,11 +61,17 @@ fn main() -> BError {
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Player>();
-    gs.ecs.insert(new_map());
+
+    let (rooms, map) = new_map_rooms_and_corridors();
+    gs.ecs.insert(map);
+    let (player_x, player_y) = rooms[0].center();
 
     gs.ecs
         .create_entity()
-        .with(Position { x: 40, y: 25 })
+        .with(Position {
+            x: player_x,
+            y: player_y,
+        })
         .with(Renderable {
             glyph: to_cp437('@'),
             fg: RGB::named(YELLOW),
