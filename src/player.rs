@@ -17,15 +17,21 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
             pos.x = min(79, max(0, pos.x + delta_x));
             pos.y = min(49, max(0, pos.y + delta_y));
 
+            let mut ppos = ecs.write_resource::<Point>();
+            ppos.x = pos.x;
+            ppos.y = pos.y;
+
             viewshed.dirty = true;
         }
     }
 }
 
-pub fn player_input(gs: &mut State, ctx: &mut BTerm) {
+pub fn player_input(gs: &mut State, ctx: &mut BTerm) -> RunState {
     // Player movement
     match ctx.key {
-        None => {} // Nothing happened
+        None => {
+            return RunState::Paused;
+        } // Nothing happened
         Some(key) => match key {
             VirtualKeyCode::Left | VirtualKeyCode::Numpad4 | VirtualKeyCode::H => {
                 try_move_player(-1, 0, &mut gs.ecs)
@@ -43,7 +49,10 @@ pub fn player_input(gs: &mut State, ctx: &mut BTerm) {
                 try_move_player(0, 1, &mut gs.ecs)
             }
 
-            _ => {}
+            _ => {
+                return RunState::Paused;
+            }
         },
     }
+    RunState::Running
 }
