@@ -19,6 +19,15 @@ use visibility_system::*;
 mod monster_ai_system;
 use monster_ai_system::*;
 
+mod map_indexing_system;
+use map_indexing_system::*;
+
+mod melee_combat_system;
+use melee_combat_system::*;
+
+mod damage_system;
+use damage_system::*;
+
 #[derive(PartialEq, Copy, Clone)]
 pub enum RunState {
     Paused,
@@ -36,6 +45,12 @@ impl State {
         vis.run_now(&self.ecs);
         let mut mob = MonsterAI {};
         mob.run_now(&self.ecs);
+        let mut mapindex = MapIndexingSystem {};
+        mapindex.run_now(&self.ecs);
+        let mut melee = MeleeCombatSystem {};
+        melee.run_now(&self.ecs);
+        let mut damage = DamageSystem {};
+        damage.run_now(&self.ecs);
         self.ecs.maintain();
     }
 }
@@ -50,6 +65,8 @@ impl GameState for State {
         } else {
             self.runstate = player_input(self, ctx);
         }
+
+        damage_system::delete_the_dead(&mut self.ecs);
 
         draw_map(&self.ecs, ctx);
 
@@ -81,6 +98,10 @@ fn main() -> BError {
     gs.ecs.register::<Viewshed>();
     gs.ecs.register::<Monster>();
     gs.ecs.register::<Name>();
+    gs.ecs.register::<BlocksTile>();
+    gs.ecs.register::<CombatStats>();
+    gs.ecs.register::<WantsToMelee>();
+    gs.ecs.register::<SufferDamage>();
 
     let map = Map::new_map_rooms_and_corridors();
 
@@ -104,6 +125,12 @@ fn main() -> BError {
         })
         .with(Name {
             name: "Player".to_string(),
+        })
+        .with(CombatStats {
+            max_hp: 30,
+            hp: 30,
+            defense: 2,
+            power: 5,
         })
         .build();
 
@@ -140,6 +167,13 @@ fn main() -> BError {
             .with(Monster {})
             .with(Name {
                 name: format!("{} #{}", name, i),
+            })
+            .with(BlocksTile {})
+            .with(CombatStats {
+                max_hp: 16,
+                hp: 16,
+                defense: 1,
+                power: 4,
             })
             .build();
     }
