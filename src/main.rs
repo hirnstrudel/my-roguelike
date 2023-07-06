@@ -30,13 +30,14 @@ use damage_system::*;
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum RunState {
-    Paused,
-    Running,
+    AwaitingInput,
+    PreRun,
+    PlayerTurn,
+    MonsterTurn,
 }
 
 pub struct State {
     ecs: World,
-    runstate: RunState,
 }
 
 impl State {
@@ -58,14 +59,26 @@ impl State {
 impl GameState for State {
     fn tick(&mut self, ctx: &mut BTerm) {
         ctx.cls();
-
-        if self.runstate == RunState::Running {
-            self.run_systems();
-            self.runstate = RunState::Paused;
-        } else {
-            self.runstate = player_input(self, ctx);
+        let mut newrunstate = *self.ecs.fetch::<RunState>();
+        newrunstate = match newrunstate {
+            RunState::PreRun => {
+                self.run_systems();
+                RunState::AwaitingInput
+            }
+            RunState::AwaitingInput => player_input(self, ctx),
+            RunState::PlayerTurn => {
+                self.run_systems();
+                RunState::MonsterTurn
+            }
+            RunState::MonsterTurn => {
+                self.run_systems();
+                RunState::AwaitingInput
+            }
+        };
+        {
+            let mut runwriter = self.ecs.write_resource::<RunState>();
+            *runwriter = newrunstate;
         }
-
         damage_system::delete_the_dead(&mut self.ecs);
 
         draw_map(&self.ecs, ctx);
@@ -88,10 +101,7 @@ fn main() -> BError {
         .with_title("My Roguelike")
         .build()?;
 
-    let mut gs = State {
-        ecs: World::new(),
-        runstate: RunState::Running,
-    };
+    let mut gs = State { ecs: World::new() };
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Player>();
@@ -106,7 +116,8 @@ fn main() -> BError {
     let map = Map::new_map_rooms_and_corridors();
 
     let (player_x, player_y) = map.rooms[0].center();
-    gs.ecs
+    let player_entity = gs
+        .ecs
         .create_entity()
         .with(Position {
             x: player_x,
@@ -178,7 +189,9 @@ fn main() -> BError {
             .build();
     }
 
+    gs.ecs.insert(RunState::PreRun);
     gs.ecs.insert(map);
+    gs.ecs.insert(player_entity);
     gs.ecs.insert(Point::new(player_x, player_y));
 
     main_loop(context, gs)
