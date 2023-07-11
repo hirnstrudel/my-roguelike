@@ -131,8 +131,7 @@ fn main() -> BError {
 
     gs.ecs.insert(RandomNumberGenerator::new());
     for room in map.rooms.iter().skip(1) {
-        let (x, y) = room.center();
-        spawner::random_monster(&mut gs.ecs, x, y);
+        spawner::spawn_room(&mut gs.ecs, room);
     }
 
     gs.ecs.insert(RunState::PreRun);
