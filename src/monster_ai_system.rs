@@ -1,6 +1,4 @@
 use super::*;
-use bracket_lib::prelude::*;
-use specs::prelude::*;
 
 pub struct MonsterAI {}
 

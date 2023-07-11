@@ -21,7 +21,7 @@ impl<'a> System<'a> for MapIndexingSystem {
 
             // If they block, update the blocking list
             let p: Option<&BlocksTile> = blockers.get(entity);
-            if let Some(p) = p {
+            if p.is_some() {
                 map.blocked[idx] = true;
             }
 
