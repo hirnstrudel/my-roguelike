@@ -28,6 +28,12 @@ use melee_combat_system::*;
 mod damage_system;
 use damage_system::*;
 
+mod gui;
+use gui::*;
+
+mod gamelog;
+use gamelog::*;
+
 #[derive(PartialEq, Copy, Clone)]
 pub enum RunState {
     AwaitingInput,
@@ -82,6 +88,7 @@ impl GameState for State {
         damage_system::delete_the_dead(&mut self.ecs);
 
         draw_map(&self.ecs, ctx);
+        draw_ui(&self.ecs, ctx);
 
         let positions = self.ecs.read_storage::<Position>();
         let renderables = self.ecs.read_storage::<Renderable>();
@@ -97,9 +104,10 @@ impl GameState for State {
 }
 
 fn main() -> BError {
-    let context = BTermBuilder::simple80x50()
+    let mut context = BTermBuilder::simple80x50()
         .with_title("My Roguelike")
         .build()?;
+    context.with_post_scanlines(true);
 
     let mut gs = State { ecs: World::new() };
     gs.ecs.register::<Position>();
@@ -193,6 +201,9 @@ fn main() -> BError {
     gs.ecs.insert(map);
     gs.ecs.insert(player_entity);
     gs.ecs.insert(Point::new(player_x, player_y));
+    gs.ecs.insert(gamelog::GameLog {
+        entries: vec!["Welcome to Rusty Roguelike".to_string()],
+    });
 
     main_loop(context, gs)
 }
