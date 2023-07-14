@@ -1,6 +1,5 @@
-use bracket_lib::terminal::{FontCharType, Point, RGB};
+use bracket_lib::prelude::*;
 use specs::{prelude::*, Component};
-
 #[derive(Component)]
 pub struct Position {
     pub x: i32,
@@ -12,6 +11,7 @@ pub struct Renderable {
     pub glyph: FontCharType,
     pub fg: RGB,
     pub bg: RGB,
+    pub render_order: i32,
 }
 
 #[derive(Component, Debug)]
@@ -74,12 +74,12 @@ pub struct Potion {
     pub heal_amount: i32,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 pub struct InBackpack {
     pub owner: Entity,
 }
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 pub struct WantsToPickupItem {
     pub collected_by: Entity,
     pub item: Entity,
@@ -88,4 +88,9 @@ pub struct WantsToPickupItem {
 #[derive(Component, Debug)]
 pub struct WantsToDrinkPotion {
     pub potion: Entity,
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct WantsToDropItem {
+    pub item: Entity,
 }

@@ -1,4 +1,4 @@
-use super::{CombatStats, GameLog, Name, SufferDamage, WantsToMelee};
+use super::{gamelog::GameLog, CombatStats, Name, SufferDamage, WantsToMelee};
 use specs::prelude::*;
 
 pub struct MeleeCombatSystem {}

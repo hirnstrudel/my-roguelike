@@ -1,5 +1,5 @@
-use super::{CombatStats, GameLog, Name, Player, SufferDamage};
-use bracket_lib::terminal::console;
+use super::{gamelog::GameLog, CombatStats, Name, Player, SufferDamage};
+use bracket_lib::prelude::*;
 use specs::prelude::*;
 
 pub struct DamageSystem {}
